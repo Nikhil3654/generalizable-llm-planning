@@ -1,0 +1,18 @@
+experiment:
+  name: baseline
+  seed: 42
+
+model:
+  name: null
+  max_new_tokens: 512
+
+data:
+  root: /kaggle/input/
+  domain: null
+
+generation:
+  temperature: 0.0
+  do_sample: false
+
+output:
+  directory: /kaggle/working/results/
