@@ -9,15 +9,23 @@ def find_pddl_files(dataset_path):
             f"Dataset directory not found: {dataset_path}"
         )
 
-    files = list(dataset_path.rglob("*.pddl"))
-
-    return sorted(files)
+    return sorted(dataset_path.rglob("*.pddl"))
 
 
-if __name__ == "__main__":
-    files = find_pddl_files("/kaggle/input")
+def find_domain_files(dataset_path, domain_name):
+    files = find_pddl_files(dataset_path)
 
-    print(f"Found {len(files)} PDDL files")
+    domain_name = domain_name.lower()
 
-    for file in files[:10]:
-        print(file)
+    return [
+        file
+        for file in files
+        if domain_name in str(file).lower()
+    ]
+
+
+def read_pddl(file_path):
+    file_path = Path(file_path)
+
+    with open(file_path, "r", encoding="utf-8") as file:
+        return file.read()
