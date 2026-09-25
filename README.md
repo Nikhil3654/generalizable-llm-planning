@@ -76,3 +76,23 @@ Experimental Results
 ```
 
 Further methods and evaluation procedures will be added after the baseline system is working.
+
+## Dataset
+
+The project uses classical PDDL planning instances from the
+`potassco/pddl-instances` benchmark collection.
+
+The benchmark contains planning domains and problem instances from
+multiple International Planning Competitions (IPC).
+
+For Kaggle experiments, the repository is imported as a Kaggle Dataset
+and attached to the notebook as an input.
+
+The dataset is available inside Kaggle under:
+
+    /kaggle/input/<dataset-name>/
+
+Dataset files are treated as read-only. Experiment outputs are written
+to:
+
+    /kaggle/working/
