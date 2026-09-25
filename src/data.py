@@ -27,5 +27,37 @@ def find_domain_files(dataset_path, domain_name):
 def read_pddl(file_path):
     file_path = Path(file_path)
 
-    with open(file_path, "r", encoding="utf-8") as file:
-        return file.read()
+    if not file_path.exists():
+        raise FileNotFoundError(
+            f"PDDL file not found: {file_path}"
+        )
+
+    return file_path.read_text(encoding="utf-8")
+
+
+def find_kaggle_dataset(dataset_name):
+    """
+    Locate a dataset inside /kaggle/input without depending on
+    a specific Kaggle username or account path.
+    """
+
+    kaggle_root = Path("/kaggle/input")
+
+    if not kaggle_root.exists():
+        raise FileNotFoundError(
+            "Kaggle input directory was not found."
+        )
+
+    matches = [
+        path
+        for path in kaggle_root.rglob("*")
+        if path.is_dir()
+        and path.name.lower() == dataset_name.lower()
+    ]
+
+    if not matches:
+        raise FileNotFoundError(
+            f"Could not find Kaggle dataset: {dataset_name}"
+        )
+
+    return matches[0]
