@@ -5,11 +5,12 @@ from pathlib import Path
 
 from src.benchmark import (
     build_benchmark_index,
+    classify_requirements,
     discover_domains,
     discover_problems,
+    extract_requirements,
     get_competition,
 )
-
 
 class TestBenchmark(unittest.TestCase):
 
@@ -107,7 +108,116 @@ class TestBenchmark(unittest.TestCase):
             get_competition(path),
             "ipc-2000",
         )
+    def test_extract_requirements(self):
+        with tempfile.TemporaryDirectory() as tmp:
 
+            domain_file = (
+                Path(tmp) / "domain.pddl"
+            )
+
+            domain_file.write_text(
+                """
+                (define (domain blocks)
+
+                    (:requirements
+                        :strips
+                        :typing
+                    )
+
+                )
+                """,
+                encoding="utf-8",
+            )
+
+            requirements = (
+                extract_requirements(
+                    domain_file
+                )
+            )
+
+            self.assertEqual(
+                requirements,
+                (
+                    ":strips",
+                    ":typing",
+                ),
+            )
+
+
+    def test_classify_strips(self):
+
+        result = classify_requirements(
+            (
+                ":strips",
+                ":typing",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "classical_strips",
+        )
+
+        self.assertTrue(
+            result["baseline_eligible"]
+        )
+
+
+    def test_classify_temporal(self):
+
+        result = classify_requirements(
+            (
+                ":strips",
+                ":typing",
+                ":durative-actions",
+            )
+        )
+
+        self.assertTrue(
+            result["is_temporal"]
+        )
+
+        self.assertFalse(
+            result["baseline_eligible"]
+        )
+
+
+    def test_classify_numeric(self):
+
+        result = classify_requirements(
+            (
+                ":strips",
+                ":fluents",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "numeric",
+        )
+
+        self.assertFalse(
+            result["baseline_eligible"]
+        )
+
+
+    def test_classify_adl(self):
+
+        result = classify_requirements(
+            (
+                ":adl",
+                ":typing",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "adl",
+        )
+
+        self.assertFalse(
+            result["baseline_eligible"]
+        )
     def test_build_benchmark_index(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -128,7 +238,11 @@ class TestBenchmark(unittest.TestCase):
             (
                 domain_dir / "domain.pddl"
             ).write_text(
-                "(define (domain blocks))",
+                """
+                (define (domain blocks)
+                    (:requirements :strips :typing)
+                )
+                """,
                 encoding="utf-8",
             )
 
@@ -149,12 +263,33 @@ class TestBenchmark(unittest.TestCase):
             )
 
             self.assertEqual(
+                index.iloc[0]["planning_type"],
+                "classical_strips",
+            )
+
+            self.assertTrue(
+                bool(
+                    index.iloc[0][
+                        "baseline_eligible"
+                    ]
+                )
+            )
+
+            self.assertEqual(
                 list(index.columns),
                 [
                     "competition",
                     "domain_variant",
                     "problem",
                     "problem_id",
+                    "requirements",
+                    "planning_type",
+                    "is_strips",
+                    "is_adl",
+                    "is_numeric",
+                    "is_temporal",
+                    "is_derived",
+                    "baseline_eligible",
                     "domain_file",
                     "problem_file",
                 ],
