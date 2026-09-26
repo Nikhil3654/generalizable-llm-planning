@@ -154,9 +154,20 @@ class TestBenchmark(unittest.TestCase):
                     "competition",
                     "domain_variant",
                     "problem",
+                    "problem_id",
                     "domain_file",
                     "problem_file",
                 ],
+            )
+
+            self.assertEqual(
+                index.iloc[0]["problem_id"],
+                1,
+            )
+
+            self.assertEqual(
+                index.iloc[1]["problem_id"],
+                2,
             )
 
             self.assertEqual(

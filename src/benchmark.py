@@ -171,22 +171,31 @@ def build_benchmark_index(dataset_root):
                 problem_file.relative_to(dataset_root)
             )
 
+            try:
+                problem_id = int(
+                    problem_file.stem.split("-")[-1]
+                )
+            except ValueError:
+                problem_id = None
+
             rows.append(
                 {
                     "competition": competition,
                     "domain_variant": domain["name"],
                     "problem": problem_file.name,
+                    "problem_id": problem_id,
                     "domain_file": str(relative_domain_file),
                     "problem_file": str(relative_problem_file),
                 }
             )
 
     columns = [
-        "competition",
-        "domain_variant",
-        "problem",
-        "domain_file",
-        "problem_file",
+    "competition",
+    "domain_variant",
+    "problem",
+    "problem_id",
+    "domain_file",
+    "problem_file",
     ]
 
     benchmark_df = pd.DataFrame(
@@ -201,8 +210,10 @@ def build_benchmark_index(dataset_root):
         by=[
             "competition",
             "domain_variant",
+            "problem_id",
             "problem_file",
-        ]
+        ],
+        na_position="last",
     ).reset_index(drop=True)
 
     return benchmark_df
