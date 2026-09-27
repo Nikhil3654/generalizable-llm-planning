@@ -417,6 +417,39 @@ class TestBenchmark(unittest.TestCase):
             result["baseline_eligible"]
         )
 
+        def test_normalize_floor_tile_family(self):
+
+            self.assertEqual(
+                normalize_planning_family(
+                    "floor-tile-sequential-optimal"
+                ),
+                "floortile",
+            )
+
+            self.assertEqual(
+                normalize_planning_family(
+                    "floortile-sequential-optimal"
+                ),
+                "floortile",
+            )
+
+
+        def test_normalize_visitall_family(self):
+
+            self.assertEqual(
+                normalize_planning_family(
+                    "visit-all-sequential-optimal"
+                ),
+                "visitall",
+            )
+
+            self.assertEqual(
+                normalize_planning_family(
+                    "visitall-sequential-optimal"
+                ),
+                "visitall",
+            )
+
     def test_build_benchmark_index(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

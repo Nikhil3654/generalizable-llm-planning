@@ -436,6 +436,15 @@ FAMILY_PREFIXES = [
     ("storage", "storage"),
     ("trucks", "trucks"),
 
+    ("floor-tile", "floortile"),
+    ("floortile", "floortile"),
+
+    ("visit-all", "visitall"),
+    ("visitall", "visitall"),
+
+    ("open-stacks", "openstacks"),
+    ("openstacks", "openstacks"),
+
     ("pegsol", "pegsol"),
     ("sokoban", "sokoban"),
     ("transport", "transport"),
