@@ -11,6 +11,7 @@ from src.benchmark import (
     extract_problem_id,
     extract_requirements,
     get_competition,
+    normalize_planning_family,
 )
 
 class TestBenchmark(unittest.TestCase):
@@ -108,6 +109,100 @@ class TestBenchmark(unittest.TestCase):
         self.assertEqual(
             get_competition(path),
             "ipc-2000",
+        )
+
+    def test_normalize_blocks_family(self):
+
+        self.assertEqual(
+            normalize_planning_family(
+                "blocks-strips-typed"
+            ),
+            "blocks",
+        )
+
+        self.assertEqual(
+            normalize_planning_family(
+                "blocks-strips-untyped"
+            ),
+            "blocks",
+        )
+
+
+    def test_normalize_logistics_family(self):
+
+        self.assertEqual(
+            normalize_planning_family(
+                "logistics-round-1-strips"
+            ),
+            "logistics",
+        )
+
+        self.assertEqual(
+            normalize_planning_family(
+                "logistics-strips-typed"
+            ),
+            "logistics",
+        )
+
+
+    def test_normalize_sequential_family(self):
+
+        self.assertEqual(
+            normalize_planning_family(
+                "barman-sequential-optimal"
+            ),
+            "barman",
+        )
+
+        self.assertEqual(
+            normalize_planning_family(
+                "parking-sequential-satisficing"
+            ),
+            "parking",
+        )
+
+
+    def test_normalize_pipesworld_family(self):
+
+        self.assertEqual(
+            normalize_planning_family(
+                "pipesworld-no-tankage-nontemporal-strips"
+            ),
+            "pipesworld",
+        )
+
+        self.assertEqual(
+            normalize_planning_family(
+                "pipesworld-tankage-nontemporal-strips"
+            ),
+            "pipesworld",
+        )
+
+
+    def test_normalize_mystery_family(self):
+
+        self.assertEqual(
+            normalize_planning_family(
+                "mystery-prime-round-1-adl"
+            ),
+            "mystery",
+        )
+
+        self.assertEqual(
+            normalize_planning_family(
+                "mystery-round-2-strips"
+            ),
+            "mystery",
+        )
+
+
+    def test_normalize_unknown_family(self):
+
+        self.assertEqual(
+            normalize_planning_family(
+                "example-domain-strips-typed"
+            ),
+            "example-domain",
         )
     def test_extract_requirements(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -384,6 +479,7 @@ class TestBenchmark(unittest.TestCase):
                 [
                     "competition",
                     "domain_variant",
+                    "planning_family",
                     "problem",
                     "problem_id",
                     "requirements",
@@ -421,7 +517,13 @@ class TestBenchmark(unittest.TestCase):
                 index.iloc[0]["domain_variant"],
                 "blocks-strips-untyped",
             )
-
+            self.assertEqual(
+                index.iloc[0][
+                    "planning_family"
+                ],
+                "blocks",
+            )
+            
             self.assertFalse(
                 str(root) in index.iloc[0]["domain_file"]
             )

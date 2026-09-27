@@ -398,6 +398,180 @@ def classify_requirements(requirements):
             ),
     }
 
+FAMILY_PREFIXES = [
+    # More specific prefixes must come before broader ones.
+    ("mystery-prime", "mystery"),
+
+    ("pipesworld-no-tankage", "pipesworld"),
+    ("pipesworld-tankage", "pipesworld"),
+    ("pipesworld", "pipesworld"),
+
+    ("blocks", "blocks"),
+    ("logistics", "logistics"),
+    ("gripper", "gripper"),
+    ("assembly", "assembly"),
+    ("grid", "grid"),
+    ("movie", "movie"),
+    ("mystery", "mystery"),
+
+    ("elevators", "elevator"),
+    ("elevator", "elevator"),
+
+    ("schedule", "schedule"),
+    ("freecell", "freecell"),
+
+    ("depots", "depots"),
+    ("driverlog", "driverlog"),
+    ("rovers", "rovers"),
+    ("satellite", "satellite"),
+    ("zenotravel", "zenotravel"),
+
+    ("airport", "airport"),
+    ("psr", "psr"),
+    ("promela", "promela"),
+    ("umts", "umts"),
+
+    ("openstacks", "openstacks"),
+    ("pathways", "pathways"),
+    ("storage", "storage"),
+    ("trucks", "trucks"),
+
+    ("pegsol", "pegsol"),
+    ("sokoban", "sokoban"),
+    ("transport", "transport"),
+    ("visitall", "visitall"),
+    ("woodworking", "woodworking"),
+    ("scanalyzer", "scanalyzer"),
+
+    ("barman", "barman"),
+    ("parking", "parking"),
+    ("hiking", "hiking"),
+    ("tidybot", "tidybot"),
+
+    ("tpp", "tpp"),
+    ("floortile", "floortile"),
+    ("nomystery", "nomystery"),
+    ("parcprinter", "parcprinter"),
+
+    ("citycar", "citycar"),
+    ("maintenance", "maintenance"),
+    ("childsnack", "childsnack"),
+    ("cavediving", "cavediving"),
+    ("tetris", "tetris"),
+    ("snake", "snake"),
+    ("termes", "termes"),
+]
+
+
+def normalize_planning_family(domain_variant):
+    """
+    Convert an IPC domain variant name into a broader planning family.
+
+    Examples
+    --------
+    blocks-strips-typed
+        -> blocks
+
+    logistics-round-1-strips
+        -> logistics
+
+    barman-sequential-optimal
+        -> barman
+
+    pipesworld-no-tankage-nontemporal-strips
+        -> pipesworld
+
+    Parameters
+    ----------
+    domain_variant : str
+        Directory/domain variant name.
+
+    Returns
+    -------
+    str
+        Normalized planning-family name.
+    """
+
+    import re
+
+    name = str(
+        domain_variant
+    ).lower().strip()
+
+    name = name.replace(
+        "_",
+        "-",
+    )
+
+    # First use explicit family prefixes.
+    for prefix, family in FAMILY_PREFIXES:
+        if name == prefix:
+            return family
+
+        if name.startswith(
+            prefix + "-"
+        ):
+            return family
+
+    # Generic fallback for domains that are not yet
+    # listed in FAMILY_PREFIXES.
+    split_patterns = [
+        r"-round-\d+",
+        r"-strips",
+        r"-adl",
+        r"-numeric",
+        r"-nontemporal",
+        r"-temporal",
+        r"-sequential",
+        r"-propositional",
+        r"-metric",
+    ]
+
+    for pattern in split_patterns:
+        match = re.search(
+            pattern,
+            name,
+        )
+
+        if match:
+            name = name[
+                :match.start()
+            ]
+            break
+
+    trailing_qualifiers = [
+        "-typed",
+        "-untyped",
+        "-automatic",
+        "-hand-coded",
+        "-optimal",
+        "-satisficing",
+        "-multi-core",
+        "-agile",
+    ]
+
+    changed = True
+
+    while changed:
+        changed = False
+
+        for suffix in trailing_qualifiers:
+            if name.endswith(suffix):
+                name = name[
+                    :-len(suffix)
+                ]
+
+                changed = True
+
+    name = name.strip("-")
+
+    if not name:
+        return str(
+            domain_variant
+        ).lower()
+
+    return name
+
 def build_benchmark_index(dataset_root):
     """
     Build a problem-level index of the PDDL benchmark dataset.
@@ -420,7 +594,12 @@ def build_benchmark_index(dataset_root):
         domain_file = Path(
             domain["domain_file"]
         )
-
+        
+        planning_family = (
+            normalize_planning_family(
+                domain["name"]
+            )
+        )
         domain_directory = (
             domain_file.parent
         )
@@ -466,6 +645,9 @@ def build_benchmark_index(dataset_root):
 
                     "domain_variant":
                         domain["name"],
+
+                    "planning_family":
+                        planning_family,
 
                     "problem":
                         problem_file.name,
@@ -550,6 +732,7 @@ def build_benchmark_index(dataset_root):
     columns = [
         "competition",
         "domain_variant",
+        "planning_family",
         "problem",
         "problem_id",
         "requirements",
@@ -582,6 +765,7 @@ def build_benchmark_index(dataset_root):
             by=[
                 "competition",
                 "domain_variant",
+                "planning_family",
                 "problem_id",
                 "problem_file",
             ],
