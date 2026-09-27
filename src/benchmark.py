@@ -55,19 +55,57 @@ def discover_domains(dataset_root):
         key=lambda item: str(item["domain_file"]),
     )
 
+def extract_problem_id(path):
+    """
+    Extract a trailing numeric problem ID from a PDDL filename.
+
+    Examples
+    --------
+    instance-1.pddl -> 1
+    problem-12.pddl -> 12
+    p03.pddl -> 3
+
+    Returns
+    -------
+    int or None
+        Trailing numeric ID when present.
+    """
+    import re
+
+    path = Path(path)
+
+    match = re.search(
+        r"(\d+)$",
+        path.stem,
+    )
+
+    if not match:
+        return None
+
+    return int(
+        match.group(1)
+    )
 
 def instance_number(path):
     """
-    Extract a numeric suffix from filenames such as instance-12.pddl.
-
-    Files without a numeric suffix fall back to lexical ordering.
+    Return a sortable key for problem filenames.
     """
     path = Path(path)
 
-    try:
-        return int(path.stem.split("-")[-1])
-    except ValueError:
-        return path.stem
+    problem_id = extract_problem_id(
+        path
+    )
+
+    if problem_id is not None:
+        return (
+            0,
+            problem_id,
+        )
+
+    return (
+        1,
+        path.stem,
+    )
 
 
 def discover_problems(domain_directory):
@@ -190,10 +228,27 @@ def extract_requirements(domain_file):
 
 def classify_requirements(requirements):
     """
-    Classify a PDDL domain from its declared requirements.
+    Classify a PDDL domain using its declared requirements.
 
-    Returns a dictionary containing useful planning-category flags.
+    The classification separates ordinary propositional classical
+    planning from ADL, numeric, temporal, derived, and other advanced
+    planning features.
+
+    A domain does not need to explicitly declare :strips to be treated
+    as classical. Some benchmark domains declare only extensions such
+    as :typing or :equality.
+
+    Parameters
+    ----------
+    requirements : iterable[str]
+        PDDL requirement flags.
+
+    Returns
+    -------
+    dict
+        Classification flags and planning type.
     """
+
     requirements = set(requirements)
 
     temporal_requirements = {
@@ -221,6 +276,20 @@ def classify_requirements(requirements):
         ":derived-predicates",
     }
 
+    advanced_requirements = {
+        ":preferences",
+        ":constraints",
+        ":goal-utilities",
+    }
+
+    basic_classical_requirements = {
+        ":strips",
+        ":typing",
+        ":equality",
+        ":negative-preconditions",
+        ":action-costs",
+    }
+
     is_temporal = bool(
         requirements & temporal_requirements
     )
@@ -237,17 +306,39 @@ def classify_requirements(requirements):
         requirements & derived_requirements
     )
 
-    is_strips = (
-        ":strips" in requirements
+    is_advanced = bool(
+        requirements & advanced_requirements
     )
 
-    # A deliberately conservative subset for our first experiments.
-    baseline_eligible = (
-        is_strips
-        and not is_temporal
+    has_action_costs = (
+        ":action-costs" in requirements
+    )
+
+    # Requirements that our simple classical subset does not support.
+    unsupported_requirements = (
+        requirements
+        - basic_classical_requirements
+    )
+
+    is_classical_core = (
+        not is_temporal
         and not is_numeric
         and not is_adl
         and not is_derived
+        and not is_advanced
+        and not unsupported_requirements
+    )
+
+    # Classical problems including action-cost domains.
+    classical_eligible = (
+        is_classical_core
+    )
+
+    # Simplest first benchmark:
+    # classical propositional planning without action costs.
+    baseline_eligible = (
+        is_classical_core
+        and not has_action_costs
     )
 
     if is_temporal and is_numeric:
@@ -259,26 +350,52 @@ def classify_requirements(requirements):
     elif is_numeric:
         planning_type = "numeric"
 
-    elif is_adl:
-        planning_type = "adl"
-
     elif is_derived:
         planning_type = "derived"
 
-    elif is_strips:
-        planning_type = "classical_strips"
+    elif is_adl:
+        planning_type = "adl"
+
+    elif is_advanced:
+        planning_type = "advanced"
+
+    elif is_classical_core and has_action_costs:
+        planning_type = "classical_cost"
+
+    elif is_classical_core:
+        planning_type = "classical"
 
     else:
         planning_type = "other"
 
     return {
         "planning_type": planning_type,
-        "is_strips": is_strips,
+
+        "is_strips": (
+            ":strips" in requirements
+        ),
+
         "is_adl": is_adl,
         "is_numeric": is_numeric,
         "is_temporal": is_temporal,
         "is_derived": is_derived,
-        "baseline_eligible": baseline_eligible,
+        "is_advanced": is_advanced,
+
+        "has_action_costs":
+            has_action_costs,
+
+        "classical_eligible":
+            classical_eligible,
+
+        "baseline_eligible":
+            baseline_eligible,
+
+        "unsupported_requirements":
+            tuple(
+                sorted(
+                    unsupported_requirements
+                )
+            ),
     }
 
 def build_benchmark_index(dataset_root):
@@ -288,21 +405,18 @@ def build_benchmark_index(dataset_root):
     Paths are stored relative to dataset_root so the benchmark
     remains portable across machines and Kaggle users.
     """
-    dataset_root = Path(
-        dataset_root
-    )
+
+    dataset_root = Path(dataset_root)
 
     if not dataset_root.exists():
         raise FileNotFoundError(
-            f"Dataset root not found: "
-            f"{dataset_root}"
+            f"Dataset root not found: {dataset_root}"
         )
 
     rows = []
 
-    for domain in discover_domains(
-        dataset_root
-    ):
+    for domain in discover_domains(dataset_root):
+
         domain_file = Path(
             domain["domain_file"]
         )
@@ -321,16 +435,12 @@ def build_benchmark_index(dataset_root):
             relative_domain_file
         )
 
-        requirements = (
-            extract_requirements(
-                domain_file
-            )
+        requirements = extract_requirements(
+            domain_file
         )
 
-        classification = (
-            classify_requirements(
-                requirements
-            )
+        classification = classify_requirements(
+            requirements
         )
 
         problems = discover_problems(
@@ -345,15 +455,9 @@ def build_benchmark_index(dataset_root):
                 )
             )
 
-            try:
-                problem_id = int(
-                    problem_file
-                    .stem
-                    .split("-")[-1]
-                )
-
-            except ValueError:
-                problem_id = None
+            problem_id = extract_problem_id(
+                problem_file
+            )
 
             rows.append(
                 {
@@ -404,10 +508,32 @@ def build_benchmark_index(dataset_root):
                             "is_derived"
                         ],
 
+                    "is_advanced":
+                        classification[
+                            "is_advanced"
+                        ],
+
+                    "has_action_costs":
+                        classification[
+                            "has_action_costs"
+                        ],
+
+                    "classical_eligible":
+                        classification[
+                            "classical_eligible"
+                        ],
+
                     "baseline_eligible":
                         classification[
                             "baseline_eligible"
                         ],
+
+                    "unsupported_requirements":
+                        " ".join(
+                            classification[
+                                "unsupported_requirements"
+                            ]
+                        ),
 
                     "domain_file":
                         str(
@@ -433,7 +559,11 @@ def build_benchmark_index(dataset_root):
         "is_numeric",
         "is_temporal",
         "is_derived",
+        "is_advanced",
+        "has_action_costs",
+        "classical_eligible",
         "baseline_eligible",
+        "unsupported_requirements",
         "domain_file",
         "problem_file",
     ]

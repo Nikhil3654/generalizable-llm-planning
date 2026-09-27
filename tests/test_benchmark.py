@@ -8,6 +8,7 @@ from src.benchmark import (
     classify_requirements,
     discover_domains,
     discover_problems,
+    extract_problem_id,
     extract_requirements,
     get_competition,
 )
@@ -155,26 +156,98 @@ class TestBenchmark(unittest.TestCase):
 
         self.assertEqual(
             result["planning_type"],
-            "classical_strips",
+            "classical",
+        )
+
+        self.assertTrue(
+            result["classical_eligible"]
         )
 
         self.assertTrue(
             result["baseline_eligible"]
         )
 
+    def test_classify_action_costs(self):
+
+        result = classify_requirements(
+            (
+                ":action-costs",
+                ":typing",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "classical_cost",
+        )
+
+        self.assertTrue(
+            result["classical_eligible"]
+        )
+
+        self.assertFalse(
+            result["baseline_eligible"]
+        )
+
+    def test_classify_equality(self):
+
+        result = classify_requirements(
+            (
+                ":equality",
+                ":typing",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "classical",
+        )
+
+        self.assertTrue(
+            result["baseline_eligible"]
+        )
+
+    def test_extract_problem_id(self):
+
+        self.assertEqual(
+            extract_problem_id(
+                Path("instance-1.pddl")
+            ),
+            1,
+        )
+
+        self.assertEqual(
+            extract_problem_id(
+                Path("problem-12.pddl")
+            ),
+            12,
+        )
+
+        self.assertEqual(
+            extract_problem_id(
+                Path("p03.pddl")
+            ),
+            3,
+        )
+
+        self.assertIsNone(
+            extract_problem_id(
+                Path("problem-final.pddl")
+            )
+        )
 
     def test_classify_temporal(self):
 
         result = classify_requirements(
             (
-                ":strips",
-                ":typing",
                 ":durative-actions",
+                ":typing",
             )
         )
 
-        self.assertTrue(
-            result["is_temporal"]
+        self.assertEqual(
+            result["planning_type"],
+            "temporal",
         )
 
         self.assertFalse(
@@ -186,8 +259,8 @@ class TestBenchmark(unittest.TestCase):
 
         result = classify_requirements(
             (
-                ":strips",
                 ":fluents",
+                ":typing",
             )
         )
 
@@ -200,6 +273,36 @@ class TestBenchmark(unittest.TestCase):
             result["baseline_eligible"]
         )
 
+    def test_classify_typing_only(self):
+
+        result = classify_requirements(
+            (
+                ":typing",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "classical",
+        )
+
+        self.assertTrue(
+            result["baseline_eligible"]
+        )
+    def test_classify_no_requirements(self):
+
+        result = classify_requirements(
+            tuple()
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "classical",
+        )
+
+        self.assertTrue(
+            result["baseline_eligible"]
+        )
 
     def test_classify_adl(self):
 
@@ -218,6 +321,7 @@ class TestBenchmark(unittest.TestCase):
         self.assertFalse(
             result["baseline_eligible"]
         )
+
     def test_build_benchmark_index(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -264,7 +368,7 @@ class TestBenchmark(unittest.TestCase):
 
             self.assertEqual(
                 index.iloc[0]["planning_type"],
-                "classical_strips",
+                "classical",
             )
 
             self.assertTrue(
@@ -289,12 +393,15 @@ class TestBenchmark(unittest.TestCase):
                     "is_numeric",
                     "is_temporal",
                     "is_derived",
+                    "is_advanced",
+                    "has_action_costs",
+                    "classical_eligible",
                     "baseline_eligible",
+                    "unsupported_requirements",
                     "domain_file",
                     "problem_file",
                 ],
             )
-
             self.assertEqual(
                 index.iloc[0]["problem_id"],
                 1,
