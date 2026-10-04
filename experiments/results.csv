@@ -1,1 +1,2 @@
 experiment_id,model,domain,num_problems,num_valid,valid_plan_rate,notes
+val-bw-001,symbolic-fastdownward+VAL,blocks-strips-untyped,5,1,0.2,1 correct reference plan + 4 deliberate invalid variants
