@@ -1,0 +1,6 @@
+variant,valid,status,returncode
+correct,True,valid,0
+truncated,False,goal_not_reached,1
+unknown_action,False,invalid,-11
+empty,False,goal_not_reached,1
+swapped_first_two,False,invalid,1
