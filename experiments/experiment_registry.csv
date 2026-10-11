@@ -1,0 +1,2 @@
+experiment_id,name,domain,tooling,status,notes
+val-bw-001,blocksworld_validation_test,blocks-strips-untyped,VAL + Fast Downward,completed,Correct plan valid; truncated/unknown/empty/swapped rejected

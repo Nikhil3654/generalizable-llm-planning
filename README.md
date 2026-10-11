@@ -77,6 +77,40 @@ Experimental Results
 
 Further methods and evaluation procedures will be added after the baseline system is working.
 
+## Plan Validation
+
+Generated plans are checked using the VAL plan validation system.
+
+The validation pipeline takes:
+
+```text
+PDDL Domain
+      +
+PDDL Problem
+      +
+Proposed Plan
+      ↓
+VAL
+      ↓
+VALID / INVALID
+```
+
+The reusable validation wrapper is located at:
+
+`src/validator.py`
+
+Unit tests are located at:
+
+`tests/test_validator.py`
+
+The Kaggle integration notebook is:
+
+`kaggle/02_plan_validation.ipynb`
+
+The notebook tests the validator using a correct Fast Downward plan and several deliberately modified plans.
+
+VAL is built inside the Kaggle environment and is not stored in this repository.
+
 ## Dataset
 
 The project uses classical PDDL planning instances from the
