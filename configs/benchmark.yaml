@@ -1,0 +1,42 @@
+benchmark:
+  name: classical-generalization-v1
+  seed: 42
+  max_instances_per_family: 20
+
+  development_families:
+    blocks:
+      competition: ipc-2000
+      variant: blocks-strips-typed
+
+    gripper:
+      competition: ipc-1998
+      variant: gripper-round-1-strips
+
+    depots:
+      competition: ipc-2002
+      variant: depots-strips-hand-coded
+
+    driverlog:
+      competition: ipc-2002
+      variant: driverlog-strips-hand-coded
+
+    satellite:
+      competition: ipc-2004
+      variant: satellite-strips
+
+    zenotravel:
+      competition: ipc-2002
+      variant: zenotravel-strips-hand-coded
+
+  held_out_families:
+    logistics:
+      competition: ipc-2000
+      variant: logistics-strips-typed
+
+    rovers:
+      competition: ipc-2002
+      variant: rovers-strips-hand-coded
+
+    barman:
+      competition: ipc-2014
+      variant: barman-sequential-satisficing

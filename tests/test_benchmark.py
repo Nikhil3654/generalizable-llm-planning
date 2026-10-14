@@ -1,0 +1,570 @@
+import tempfile
+import unittest
+
+from pathlib import Path
+
+from src.benchmark import (
+    build_benchmark_index,
+    classify_requirements,
+    discover_domains,
+    discover_problems,
+    extract_problem_id,
+    extract_requirements,
+    get_competition,
+    normalize_planning_family,
+)
+
+class TestBenchmark(unittest.TestCase):
+
+    def test_discover_domains(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            domain_dir = (
+                root
+                / "ipc-2000"
+                / "domains"
+                / "blocks"
+            )
+
+            instances_dir = (
+                domain_dir / "instances"
+            )
+
+            instances_dir.mkdir(parents=True)
+
+            (
+                domain_dir / "domain.pddl"
+            ).write_text(
+                "(define (domain blocks))",
+                encoding="utf-8",
+            )
+
+            (
+                instances_dir / "instance-1.pddl"
+            ).write_text(
+                "(define (problem p1))",
+                encoding="utf-8",
+            )
+
+            domains = discover_domains(root)
+
+            self.assertEqual(
+                len(domains),
+                1,
+            )
+
+            self.assertEqual(
+                domains[0]["name"],
+                "blocks",
+            )
+
+            self.assertEqual(
+                domains[0]["num_instances"],
+                1,
+            )
+
+    def test_discover_problems_numeric_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            domain_dir = Path(tmp)
+
+            instances_dir = (
+                domain_dir / "instances"
+            )
+
+            instances_dir.mkdir()
+
+            for number in [10, 2, 1]:
+                (
+                    instances_dir
+                    / f"instance-{number}.pddl"
+                ).write_text(
+                    "(problem)",
+                    encoding="utf-8",
+                )
+
+            problems = discover_problems(
+                domain_dir
+            )
+
+            names = [
+                problem.name
+                for problem in problems
+            ]
+
+            self.assertEqual(
+                names,
+                [
+                    "instance-1.pddl",
+                    "instance-2.pddl",
+                    "instance-10.pddl",
+                ],
+            )
+
+    def test_get_competition(self):
+        path = Path(
+            "ipc-2000/domains/blocks/domain.pddl"
+        )
+
+        self.assertEqual(
+            get_competition(path),
+            "ipc-2000",
+        )
+
+    def test_normalize_blocks_family(self):
+
+        self.assertEqual(
+            normalize_planning_family(
+                "blocks-strips-typed"
+            ),
+            "blocks",
+        )
+
+        self.assertEqual(
+            normalize_planning_family(
+                "blocks-strips-untyped"
+            ),
+            "blocks",
+        )
+
+
+    def test_normalize_logistics_family(self):
+
+        self.assertEqual(
+            normalize_planning_family(
+                "logistics-round-1-strips"
+            ),
+            "logistics",
+        )
+
+        self.assertEqual(
+            normalize_planning_family(
+                "logistics-strips-typed"
+            ),
+            "logistics",
+        )
+
+
+    def test_normalize_sequential_family(self):
+
+        self.assertEqual(
+            normalize_planning_family(
+                "barman-sequential-optimal"
+            ),
+            "barman",
+        )
+
+        self.assertEqual(
+            normalize_planning_family(
+                "parking-sequential-satisficing"
+            ),
+            "parking",
+        )
+
+
+    def test_normalize_pipesworld_family(self):
+
+        self.assertEqual(
+            normalize_planning_family(
+                "pipesworld-no-tankage-nontemporal-strips"
+            ),
+            "pipesworld",
+        )
+
+        self.assertEqual(
+            normalize_planning_family(
+                "pipesworld-tankage-nontemporal-strips"
+            ),
+            "pipesworld",
+        )
+
+
+    def test_normalize_mystery_family(self):
+
+        self.assertEqual(
+            normalize_planning_family(
+                "mystery-prime-round-1-adl"
+            ),
+            "mystery",
+        )
+
+        self.assertEqual(
+            normalize_planning_family(
+                "mystery-round-2-strips"
+            ),
+            "mystery",
+        )
+
+
+    def test_normalize_unknown_family(self):
+
+        self.assertEqual(
+            normalize_planning_family(
+                "example-domain-strips-typed"
+            ),
+            "example-domain",
+        )
+    def test_extract_requirements(self):
+        with tempfile.TemporaryDirectory() as tmp:
+
+            domain_file = (
+                Path(tmp) / "domain.pddl"
+            )
+
+            domain_file.write_text(
+                """
+                (define (domain blocks)
+
+                    (:requirements
+                        :strips
+                        :typing
+                    )
+
+                )
+                """,
+                encoding="utf-8",
+            )
+
+            requirements = (
+                extract_requirements(
+                    domain_file
+                )
+            )
+
+            self.assertEqual(
+                requirements,
+                (
+                    ":strips",
+                    ":typing",
+                ),
+            )
+
+
+    def test_classify_strips(self):
+
+        result = classify_requirements(
+            (
+                ":strips",
+                ":typing",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "classical",
+        )
+
+        self.assertTrue(
+            result["classical_eligible"]
+        )
+
+        self.assertTrue(
+            result["baseline_eligible"]
+        )
+
+    def test_classify_action_costs(self):
+
+        result = classify_requirements(
+            (
+                ":action-costs",
+                ":typing",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "classical_cost",
+        )
+
+        self.assertTrue(
+            result["classical_eligible"]
+        )
+
+        self.assertFalse(
+            result["baseline_eligible"]
+        )
+
+    def test_classify_equality(self):
+
+        result = classify_requirements(
+            (
+                ":equality",
+                ":typing",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "classical",
+        )
+
+        self.assertTrue(
+            result["baseline_eligible"]
+        )
+
+    def test_extract_problem_id(self):
+
+        self.assertEqual(
+            extract_problem_id(
+                Path("instance-1.pddl")
+            ),
+            1,
+        )
+
+        self.assertEqual(
+            extract_problem_id(
+                Path("problem-12.pddl")
+            ),
+            12,
+        )
+
+        self.assertEqual(
+            extract_problem_id(
+                Path("p03.pddl")
+            ),
+            3,
+        )
+
+        self.assertIsNone(
+            extract_problem_id(
+                Path("problem-final.pddl")
+            )
+        )
+
+    def test_classify_temporal(self):
+
+        result = classify_requirements(
+            (
+                ":durative-actions",
+                ":typing",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "temporal",
+        )
+
+        self.assertFalse(
+            result["baseline_eligible"]
+        )
+
+
+    def test_classify_numeric(self):
+
+        result = classify_requirements(
+            (
+                ":fluents",
+                ":typing",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "numeric",
+        )
+
+        self.assertFalse(
+            result["baseline_eligible"]
+        )
+
+    def test_classify_typing_only(self):
+
+        result = classify_requirements(
+            (
+                ":typing",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "classical",
+        )
+
+        self.assertTrue(
+            result["baseline_eligible"]
+        )
+    def test_classify_no_requirements(self):
+
+        result = classify_requirements(
+            tuple()
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "classical",
+        )
+
+        self.assertTrue(
+            result["baseline_eligible"]
+        )
+
+    def test_classify_adl(self):
+
+        result = classify_requirements(
+            (
+                ":adl",
+                ":typing",
+            )
+        )
+
+        self.assertEqual(
+            result["planning_type"],
+            "adl",
+        )
+
+        self.assertFalse(
+            result["baseline_eligible"]
+        )
+
+        def test_normalize_floor_tile_family(self):
+
+            self.assertEqual(
+                normalize_planning_family(
+                    "floor-tile-sequential-optimal"
+                ),
+                "floortile",
+            )
+
+            self.assertEqual(
+                normalize_planning_family(
+                    "floortile-sequential-optimal"
+                ),
+                "floortile",
+            )
+
+
+        def test_normalize_visitall_family(self):
+
+            self.assertEqual(
+                normalize_planning_family(
+                    "visit-all-sequential-optimal"
+                ),
+                "visitall",
+            )
+
+            self.assertEqual(
+                normalize_planning_family(
+                    "visitall-sequential-optimal"
+                ),
+                "visitall",
+            )
+
+    def test_build_benchmark_index(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            domain_dir = (
+                root
+                / "ipc-2000"
+                / "domains"
+                / "blocks-strips-untyped"
+            )
+
+            instances_dir = (
+                domain_dir / "instances"
+            )
+
+            instances_dir.mkdir(parents=True)
+
+            (
+                domain_dir / "domain.pddl"
+            ).write_text(
+                """
+                (define (domain blocks)
+                    (:requirements :strips :typing)
+                )
+                """,
+                encoding="utf-8",
+            )
+
+            for number in [1, 2]:
+                (
+                    instances_dir
+                    / f"instance-{number}.pddl"
+                ).write_text(
+                    f"(define (problem p{number}))",
+                    encoding="utf-8",
+                )
+
+            index = build_benchmark_index(root)
+
+            self.assertEqual(
+                len(index),
+                2,
+            )
+
+            self.assertEqual(
+                index.iloc[0]["planning_type"],
+                "classical",
+            )
+
+            self.assertTrue(
+                bool(
+                    index.iloc[0][
+                        "baseline_eligible"
+                    ]
+                )
+            )
+
+            self.assertEqual(
+                list(index.columns),
+                [
+                    "competition",
+                    "domain_variant",
+                    "planning_family",
+                    "problem",
+                    "problem_id",
+                    "requirements",
+                    "planning_type",
+                    "is_strips",
+                    "is_adl",
+                    "is_numeric",
+                    "is_temporal",
+                    "is_derived",
+                    "is_advanced",
+                    "has_action_costs",
+                    "classical_eligible",
+                    "baseline_eligible",
+                    "unsupported_requirements",
+                    "domain_file",
+                    "problem_file",
+                ],
+            )
+            self.assertEqual(
+                index.iloc[0]["problem_id"],
+                1,
+            )
+
+            self.assertEqual(
+                index.iloc[1]["problem_id"],
+                2,
+            )
+
+            self.assertEqual(
+                index.iloc[0]["competition"],
+                "ipc-2000",
+            )
+
+            self.assertEqual(
+                index.iloc[0]["domain_variant"],
+                "blocks-strips-untyped",
+            )
+            self.assertEqual(
+                index.iloc[0][
+                    "planning_family"
+                ],
+                "blocks",
+            )
+            
+            self.assertFalse(
+                str(root) in index.iloc[0]["domain_file"]
+            )
+
+            self.assertFalse(
+                str(root) in index.iloc[0]["problem_file"]
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()
